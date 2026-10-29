@@ -202,3 +202,45 @@ def update_role(
   db.commit()
   db.refresh(anggota)
   return anggota
+
+@router.patch('/restore/{anggota_id}', status_code=status.HTTP_204_NO_CONTENT)
+def restore(
+  anggota_id: int,
+  current_user = Depends(require_role(['pengurus'])),
+  db: Session = Depends(get_db),
+):
+  anggota = db.query(Anggota).filter(Anggota.id == anggota_id, Anggota.deleted_at.is_not(None)).first()
+
+  if not anggota:
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Data anggota tidak ditemukan atau tidak berstatus terhapus"
+    )
+
+  if anggota.user:
+    anggota.user.is_active = 1
+
+    prefix = f"deleted_{anggota.id}.{anggota.user.username}"
+    if anggota.user.username.startswith(prefix):
+      original_username = anggota.user.username.replace(prefix, "", 1)
+
+      username_exist = db.query(User).filter(
+        User.username == original_username,
+        User.id != anggota.user.id
+      )
+
+      if username_exist:
+        raise HTTPException(
+          status_code=status.HTTP_400_BAD_REQUEST,
+          detail="Gagal memulihkan! Username '{original_username}' sudah digunakan oleh akun lain."
+        )
+
+      anggota.user.username = original_username
+
+  anggota.deleted_at = None
+  anggota.user.is_active = 1
+
+  db.commit()
+  db.refresh(anggota)
+
+  return Response(status_code=status.HTTP_204_NO_CONTENT)

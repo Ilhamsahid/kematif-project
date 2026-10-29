@@ -58,3 +58,12 @@ class AnggotaResponse(BaseModel):
   tanggal_bergabung: date
   created_at: datetime
   updated_at: datetime
+
+class AnggotaCreateResponse(AnggotaResponse):
+  password_awal: str
+
+class AnggotaListResponse(BaseModel):
+  items: list[AnggotaResponse]
+  total: int
+  page: int
+  limit: int

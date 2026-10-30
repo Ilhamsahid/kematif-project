@@ -227,7 +227,7 @@ def restore(
       username_exist = db.query(User).filter(
         User.username == original_username,
         User.id != anggota.user.id
-      )
+      ).first()
 
       if username_exist:
         raise HTTPException(
